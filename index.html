@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KHUFU — The Singing Pyramid</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=DM+Mono:wght@300;400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap');
+
+:root {
+  --void:    #03020a;
+  --deep:    #070608;
+  --murk:    #0d0a0c;
+  /* Stone / desert palette */
+  --sand0:   #f8e8c0;
+  --sand1:   #e0c880;
+  --sand2:   #b89840;
+  --sand3:   #806820;
+  --sand4:   #4a3808;
+  --granite0:#d0c8c0;
+  --granite1:#a89888;
+  --granite2:#786858;
+  --granite3:#483830;
+  /* Chamber glow */
+  --chamber0:#ffe8a0;
+  --chamber1:#e0b840;
+  --chamber2:#c08020;
+  --resonant:#fff0c0;  /* the singing frequency */
+  --star0:   #e8f0ff;
+  --star1:   #c0d0f8;
+  --cosmic:  rgba(200,210,255,.15);
+  --text:    #807060;
+  --text2:   #504030;
+  --text3:   #2a1c10;
+  --mono:   'DM Mono', monospace;
+  --serif:  'Cormorant Garamond', serif;
+  --goth:   'UnifrakturMaguntia', cursive;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  background: var(--void);
+  overflow: hidden;
+  font-family: var(--mono);
+  cursor: none;
+}
+
+#cursor {
+  position: fixed; width: 22px; height: 22px;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%,-50%);
+}
+
+#bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+#app {
+  position: relative; width: 100vw; height: 100vh;
+  display: flex; flex-direction: column; z-index: 1;
+}
+
+/* ── HEADER ── */
+#hdr {
+  flex-shrink: 0; padding: 16px 28px 12px;
+  display: flex; align-items: baseline; gap: 18px;
+  border-bottom: 1px solid var(--text3);
+  background: linear-gradient(180deg, rgba(7,6,8,.97) 0%, transparent 100%);
+  position: relative; z-index: 2;
+}
+#logo {
+  font-family: var(--goth); font-size: 34px;
+  color: var(--sand1);
+  text-shadow: 0 0 22px rgba(224,200,128,.4), 0 0 55px rgba(176,152,64,.18);
+  letter-spacing: 5px; line-height: 1;
+}
+#logo-sub {
+  font-family: var(--serif); font-style: italic; font-size: 10px;
+  letter-spacing: 2px; color: var(--text3);
+}
+#hdr-stats { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.hstat { font-family: var(--mono); font-size: 9px; letter-spacing: 1px; color: var(--text3); text-transform: uppercase; }
+.hstat span { color: var(--text2); transition: color .1s; }
+.hstat span.lit   { color: var(--sand0); text-shadow: 0 0 8px var(--sand2); }
+.hstat span.lit-c { color: var(--chamber0); text-shadow: 0 0 8px var(--chamber1); }
+#power-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); transition: all .4s; }
+#power-dot.on { background: var(--sand1); box-shadow: 0 0 8px var(--sand1), 0 0 22px rgba(224,200,128,.45); }
+
+/* ── MAIN ── */
+#main { flex: 1; display: flex; overflow: hidden; position: relative; }
+#main::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(224,200,128,.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(224,200,128,.012) 1px, transparent 1px);
+  background-size: 60px 50px; pointer-events: none;
+}
+
+/* ── CENTER ── */
+#center {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start;
+  padding: 8px 16px 0; gap: 8px;
+  position: relative; z-index: 1; overflow: hidden;
+}
+
+/* ── PYRAMID + CROSS-SECTION ── */
+#pyramid-section {
+  width: 100%; max-width: 760px; flex-shrink: 0;
+  height: 220px; position: relative;
+}
+#pyramid-svg { width: 100%; height: 100%; overflow: visible; }
+
+/* Chamber pulse animations */
+.chamber-group { cursor: pointer; }
+.chamber-fill { transition: fill .15s, opacity .15s; }
+.chamber-group.ringing .chamber-fill {
+  animation: chamberpulse .08s ease-out;
+}
+@keyframes chamberpulse {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+.chamber-group.active-chamber .chamber-fill {
+  animation: chambershine 2s ease-in-out infinite;
+}
+@keyframes chambershine {
+  0%,100% { fill-opacity: .25; }
+  50%      { fill-opacity: .55; }
+}
+
+/* Sound wave rings expanding from apex */
+.pyramid-wave { pointer-events: none; animation: pyramidwave 1.2s ease-out forwards; }
+@keyframes pyramidwave {
+  0%   { opacity: .7; transform: scale(.4); }
+  100% { opacity: 0;  transform: scale(2.8); }
+}
+
+/* Sarcophagus shimmer */
+.sarc-glow { opacity: 0; pointer-events: none; transition: opacity .3s; }
+.sarc-glow.on { opacity: 1; animation: sarcpulse 1.5s ease-in-out infinite; }
+@keyframes sarcpulse {
+  0%,100% { opacity: .4; }
+  50%      { opacity: .9; }
+}
+
+/* Star shaft beam */
+.shaft-beam { opacity: 0; pointer-events: none; }
+.shaft-beam.on { animation: shaftbeam 2s ease-in-out infinite; }
+@keyframes shaftbeam {
+  0%,100% { opacity: 0; }
+  50%      { opacity: .35; }
+}
+
+/* ── FREQUENCY TUNER ── */
+#tuner-section {
+  width: 100%; max-width: 760px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px;
+}
+#tuner-label { font-family:var(--mono);font-size:7px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;flex-shrink:0; }
+#tuner-outer {
+  flex: 1; height: 14px;
+  border: 1px solid var(--text3); border-radius: 7px;
+  background: var(--deep); overflow: hidden; cursor: ew-resize; position: relative;
+}
+#tuner-fill {
+  height: 100%; width: 50%;
+  border-radius: 7px;
+  background: linear-gradient(90deg, rgba(224,200,128,.25), rgba(255,240,160,.65));
+  transition: width .04s;
+}
+/* Resonant frequency marker */
+#resonant-marker {
+  position: absolute; top: 0; bottom: 0; width: 2px;
+  background: rgba(255,240,160,.8); box-shadow: 0 0 6px rgba(255,240,160,.6);
+  pointer-events: none; transition: left .1s;
+}
+#tuner-freq { font-family:var(--mono);font-size:9px;color:var(--sand2);flex-shrink:0;width:50px;text-align:right; }
+#tuner-note { font-family:var(--serif);font-style:italic;font-size:10px;color:var(--text3);flex-shrink:0;width:28px;text-align:right; }
+
+/* ── CHAMBER PADS ── */
+#chamber-grid {
+  width: 100%; max-width: 760px; flex-shrink: 0;
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 6px;
+}
+.cpad {
+  border: 1px solid var(--text3); border-radius: 2px;
+  background: rgba(7,6,8,.7); cursor: pointer;
+  padding: 8px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: all .15s; user-select: none; overflow: hidden; position: relative;
+}
+.cpad::after { content:'';position:absolute;inset:0;opacity:0;transition:opacity .1s;pointer-events:none; }
+.cpad.v-king::after  { background: rgba(224,200,128,.08); }
+.cpad.v-queen::after { background: rgba(192,128,32,.08); }
+.cpad.v-grand::after { background: rgba(160,200,240,.08); }
+.cpad.v-star::after  { background: rgba(200,210,255,.06); }
+.cpad.hit::after { opacity: 1; }
+.cpad.hold-on { border-color: rgba(224,200,128,.4); background: rgba(224,200,128,.03); }
+.cpad.hit.v-king  { border-color: var(--sand1); }
+.cpad.hit.v-queen { border-color: var(--chamber1); }
+.cpad.hit.v-grand { border-color: rgba(160,200,240,.6); }
+.cpad.hit.v-star  { border-color: rgba(200,210,255,.5); }
+.cpad-icon { font-size: 16px; filter: grayscale(.6) brightness(.6); transition: filter .1s; pointer-events: none; }
+.cpad.hit .cpad-icon, .cpad.hold-on .cpad-icon { filter: grayscale(0) brightness(1.1); }
+.cpad-name { font-family:var(--serif);font-style:italic;font-size:11px;color:var(--text2);pointer-events:none;text-align:center;line-height:1.2; }
+.cpad.v-king.hit .cpad-name, .cpad.v-king.hold-on .cpad-name { color: var(--sand0); }
+.cpad.v-queen.hit .cpad-name, .cpad.v-queen.hold-on .cpad-name { color: var(--chamber0); }
+.cpad.v-grand.hit .cpad-name, .cpad.v-grand.hold-on .cpad-name { color: #b8d8f8; }
+.cpad.v-star.hit .cpad-name, .cpad.v-star.hold-on .cpad-name { color: var(--star0); }
+.cpad-key { font-family:var(--mono);font-size:7px;color:var(--text3);pointer-events:none;letter-spacing:1px; }
+.hold-pip { position:absolute;top:5px;right:6px;width:4px;height:4px;border-radius:50%;background:var(--text3);transition:background .2s; }
+.cpad.hold-on .hold-pip { background: var(--sand1); box-shadow: 0 0 4px var(--sand1); }
+
+/* ── KEYBOARD ── */
+#kb-section { width:100%;max-width:760px;flex-shrink:0;position:relative; }
+#keyboard {
+  display:flex;height:78px;
+  border:1px solid var(--text3);border-radius:0 0 3px 3px;
+  overflow:hidden;position:relative;
+  background:linear-gradient(180deg,#080608 0%,#050406 100%);
+}
+.key{position:relative;cursor:pointer;flex-shrink:0;transition:background .04s;}
+.key.white{background:linear-gradient(180deg,#0e0c0a 0%,#060406 100%);border-right:1px solid var(--text3);flex:1;z-index:1;}
+.key.white:hover{background:rgba(224,200,128,.05);}
+.key.white.active{background:linear-gradient(180deg,rgba(224,200,128,.42) 0%,rgba(128,104,32,.28) 100%) !important;box-shadow:inset 0 -2px 12px rgba(224,200,128,.22);}
+.key.black{background:linear-gradient(180deg,#040208 0%,#080406 100%);position:absolute;width:60%;height:62%;top:0;z-index:2;border-radius:0 0 3px 3px;border:1px solid var(--text3);border-top:none;}
+.key.black:hover{background:rgba(192,160,80,.08);}
+.key.black.active{background:rgba(192,160,80,.22) !important;}
+.key-lbl{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:7px;color:var(--text3);pointer-events:none;user-select:none;}
+.key.active .key-lbl{color:rgba(224,200,128,.4);}
+
+#oct-outer{position:absolute;left:-46px;top:0;display:flex;flex-direction:column;align-items:center;gap:3px;}
+#oct-wheel{width:32px;height:78px;background:var(--void);border:1px solid var(--text3);border-radius:4px;overflow:hidden;cursor:ns-resize;position:relative;user-select:none;}
+#oct-wheel-inner{position:absolute;top:0;left:0;right:0;transition:transform .14s cubic-bezier(.22,.68,0,1.2);}
+.ow-slot{height:18px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:var(--text3);border-bottom:1px solid var(--text3);flex-shrink:0;}
+.ow-slot.cur{color:var(--sand1);background:rgba(224,200,128,.05);}
+#oct-wheel::before,#oct-wheel::after{content:'';position:absolute;left:0;right:0;height:12px;z-index:2;pointer-events:none;}
+#oct-wheel::before{top:0;background:linear-gradient(to bottom,var(--void),transparent);}
+#oct-wheel::after{bottom:0;background:linear-gradient(to top,var(--void),transparent);}
+#oct-lbl{font-family:var(--mono);font-size:7px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;}
+
+/* ── WAVEFORM ── */
+#wave-bar{flex-shrink:0;height:50px;background:var(--deep);border-top:1px solid var(--text3);position:relative;z-index:2;overflow:hidden;}
+#wave-canvas{width:100%;height:100%;display:block;}
+
+/* ── RIGHT PANEL ── */
+#panel{width:210px;flex-shrink:0;border-left:1px solid var(--text3);background:linear-gradient(180deg,rgba(7,6,8,.95) 0%,rgba(5,4,6,.98) 100%);display:flex;flex-direction:column;padding:16px 14px;gap:14px;overflow-y:auto;position:relative;z-index:5;}
+.psec{display:flex;flex-direction:column;gap:7px;}
+.ptitle{font-family:var(--mono);font-size:7px;letter-spacing:3px;text-transform:uppercase;color:rgba(224,200,128,.22);padding-bottom:5px;border-bottom:1px solid rgba(224,200,128,.05);}
+.pBtn{font-family:var(--serif);font-style:italic;font-size:12px;padding:5px 10px;border:1px solid rgba(224,200,128,.13);border-radius:2px;color:rgba(224,200,128,.3);background:transparent;cursor:pointer;transition:all .15s;text-align:left;}
+.pBtn:hover{color:var(--sand0);border-color:rgba(224,200,128,.38);}
+.pBtn.active{color:var(--sand0);border-color:var(--sand1);background:rgba(224,200,128,.05);text-shadow:0 0 8px rgba(224,200,128,.32);}
+.kg{display:flex;flex-direction:column;align-items:center;gap:3px;}
+canvas.knob{cursor:ns-resize;display:block;}
+.kl{font-family:var(--mono);font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(224,200,128,.2);}
+.kv{font-family:var(--mono);font-size:9px;color:rgba(224,200,128,.45);min-width:32px;text-align:center;}
+.knob-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+
+#lore-display{margin-top:auto;padding-top:10px;border-top:1px solid rgba(224,200,128,.05);display:flex;flex-direction:column;align-items:center;gap:4px;}
+#lore-note{font-family:var(--goth);font-size:24px;letter-spacing:3px;color:var(--sand1);text-shadow:0 0 14px rgba(224,200,128,.35);line-height:1;}
+#lore-freq2{font-family:var(--mono);font-size:9px;color:var(--text2);letter-spacing:1px;}
+#lore-text{font-family:var(--serif);font-style:italic;font-size:11px;color:rgba(224,200,128,.28);text-align:center;line-height:1.55;max-width:170px;}
+
+#controls{flex-shrink:0;background:linear-gradient(0deg,rgba(5,4,6,.98) 0%,transparent 100%);border-top:1px solid var(--text3);padding:9px 22px 13px;display:flex;align-items:center;gap:16px;position:relative;z-index:2;flex-wrap:wrap;}
+.cdiv{width:1px;height:30px;background:var(--text3);flex-shrink:0;}
+::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+
+<!-- Cursor: Eye of Horus / ankh stylized -->
+<div id="cursor">
+  <svg viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg">
+    <path d="M11 3 L19 18 L11 15 L3 18 Z"
+      fill="rgba(224,200,128,.15)" stroke="rgba(224,200,128,.8)" stroke-width="1" stroke-linejoin="round"/>
+    <circle cx="11" cy="12" r="2" fill="rgba(224,200,128,.7)"/>
+    <circle cx="11" cy="12" r=".8" fill="rgba(7,6,8,.9)"/>
+  </svg>
+</div>
+
+<canvas id="bg"></canvas>
+
+<div id="app">
+  <div id="hdr">
+    <div>
+      <div id="logo">Khufu</div>
+      <div id="logo-sub">The Singing Pyramid · King's Chamber resonates at 438 Hz · Built in stone to sing forever</div>
+    </div>
+    <div id="hdr-stats">
+      <div class="hstat">Chamber <span id="hs-chamber">—</span></div>
+      <div class="hstat">Freq <span id="hs-freq">—</span></div>
+      <div class="hstat">Stone <span id="hs-stone">silent</span></div>
+      <div id="power-dot"></div>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="center">
+
+      <!-- PYRAMID CROSS-SECTION -->
+      <div id="pyramid-section">
+        <svg id="pyramid-svg" viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="stone-face" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="#9c8860"/>
+              <stop offset="40%"  stop-color="#7a6848"/>
+              <stop offset="100%" stop-color="#4a3828"/>
+            </linearGradient>
+            <linearGradient id="stone-shadow" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stop-color="#3a2c1c"/>
+              <stop offset="100%" stop-color="#2a1c0c"/>
+            </linearGradient>
+            <linearGradient id="chamber-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="rgba(224,200,128,.3)"/>
+              <stop offset="100%" stop-color="rgba(160,120,40,.2)"/>
+            </linearGradient>
+            <linearGradient id="granite-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="#8a7868"/>
+              <stop offset="100%" stop-color="#5a4838"/>
+            </linearGradient>
+            <filter id="chamber-glow">
+              <feGaussianBlur stdDeviation="3" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="apex-glow">
+              <feGaussianBlur stdDeviation="5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <!-- Desert ground -->
+          <path d="M 0 212 C 100 210 300 211 500 210 C 620 209 700 210 760 209 L 760 220 L 0 220 Z"
+            fill="rgba(60,40,12,.6)"/>
+          <line x1="0" y1="210" x2="760" y2="210"
+            stroke="rgba(120,90,30,.3)" stroke-width="1"/>
+
+          <!-- ══ PYRAMID OUTER BODY ══ -->
+          <!-- Right face (sunlit) -->
+          <path d="M 380 18 L 680 210 L 380 210 Z"
+            fill="url(#stone-face)" stroke="rgba(60,40,12,.3)" stroke-width=".8"/>
+          <!-- Left face (in shadow) -->
+          <path d="M 380 18 L 80 210 L 380 210 Z"
+            fill="url(#stone-shadow)" stroke="rgba(60,40,12,.3)" stroke-width=".8"/>
+
+          <!-- Stone course lines (horizontal layers) -->
+          <g stroke="rgba(0,0,0,.15)" stroke-width=".6" fill="none">
+            <!-- Right face courses -->
+            <line x1="380" y1="48"  x2="648" y2="210"/>
+            <line x1="380" y1="78"  x2="616" y2="210"/>
+            <line x1="380" y1="108" x2="584" y2="210"/>
+            <line x1="380" y1="138" x2="552" y2="210"/>
+            <line x1="380" y1="168" x2="520" y2="210"/>
+            <!-- Left face courses -->
+            <line x1="380" y1="48"  x2="112" y2="210"/>
+            <line x1="380" y1="78"  x2="144" y2="210"/>
+            <line x1="380" y1="108" x2="176" y2="210"/>
+            <line x1="380" y1="138" x2="208" y2="210"/>
+            <line x1="380" y1="168" x2="240" y2="210"/>
+          </g>
+
+          <!-- Capstone (electrum-tipped) -->
+          <path d="M 380 18 L 393 45 L 367 45 Z"
+            fill="#d4a840" stroke="rgba(200,160,40,.5)" stroke-width=".8"
+            filter="url(#apex-glow)"/>
+          <!-- Capstone shimmer -->
+          <circle id="apex-glow-dot" cx="380" cy="26" r="5"
+            fill="rgba(255,232,100,.0)" filter="url(#apex-glow)"/>
+
+          <!-- ══ PYRAMID WAVES (sound expanding from apex) ══ -->
+          <g id="wave-group"></g>
+
+          <!-- ══ INTERNAL PASSAGES AND CHAMBERS ══ -->
+
+          <!-- Grand Gallery (ascending passage, long angled corridor) -->
+          <g class="chamber-group" id="ch-gallery" data-chamber="gallery">
+            <path d="M 312 148 L 420 88 L 428 92 L 320 152 Z"
+              fill="rgba(160,120,40,.12)" stroke="rgba(224,200,128,.25)" stroke-width=".8" class="chamber-fill"/>
+            <text x="368" y="118" font-family="'Cormorant Garamond',serif" font-style="italic"
+              font-size="7" fill="rgba(224,200,128,.3)" text-anchor="middle" transform="rotate(-28 368 118)">Grand Gallery</text>
+          </g>
+
+          <!-- Queen's Chamber -->
+          <g class="chamber-group" id="ch-queen" data-chamber="queen">
+            <rect x="308" y="148" width="52" height="28" rx="1"
+              fill="rgba(192,128,32,.15)" stroke="rgba(224,200,128,.3)" stroke-width=".8" class="chamber-fill"/>
+            <!-- Peaked ceiling -->
+            <path d="M 308 148 L 334 136 L 360 148"
+              fill="rgba(192,128,32,.1)" stroke="rgba(224,200,128,.22)" stroke-width=".8" pointer-events="none"/>
+            <text x="334" y="164" font-family="'Cormorant Garamond',serif" font-style="italic"
+              font-size="7" fill="rgba(200,160,60,.4)" text-anchor="middle">Queen's</text>
+          </g>
+
+          <!-- King's Chamber (granite-lined, the main resonator) -->
+          <g class="chamber-group" id="ch-king" data-chamber="king">
+            <rect x="358" y="108" width="72" height="36" rx="1"
+              fill="rgba(224,200,128,.18)" stroke="rgba(255,232,128,.45)" stroke-width="1.2" class="chamber-fill"
+              filter="url(#chamber-glow)"/>
+            <!-- Granite roof slabs above -->
+            <rect x="356" y="100" width="76" height="10" rx="1"
+              fill="rgba(120,96,72,.35)" stroke="rgba(160,128,80,.3)" stroke-width=".7" pointer-events="none"/>
+            <rect x="356" y="92"  width="76" height="9"  rx="1"
+              fill="rgba(100,80,60,.3)"  stroke="rgba(140,110,70,.25)" stroke-width=".7" pointer-events="none"/>
+            <rect x="356" y="84"  width="76" height="9"  rx="1"
+              fill="rgba(80,64,48,.25)"  stroke="rgba(120,96,60,.2)"  stroke-width=".7" pointer-events="none"/>
+            <rect x="356" y="76"  width="76" height="9"  rx="1"
+              fill="rgba(60,48,36,.2)"   stroke="rgba(100,80,50,.18)" stroke-width=".7" pointer-events="none"/>
+            <rect x="356" y="68"  width="76" height="9"  rx="1"
+              fill="rgba(48,38,28,.18)"  stroke="rgba(80,64,40,.15)"  stroke-width=".7" pointer-events="none"/>
+
+            <!-- Sarcophagus inside King's Chamber -->
+            <rect id="sarcophagus" x="368" y="124" width="30" height="14" rx="2"
+              fill="url(#granite-grad)" stroke="rgba(200,168,100,.5)" stroke-width="1"/>
+            <!-- Sarcophagus lid line -->
+            <line x1="368" y1="130" x2="398" y2="130"
+              stroke="rgba(200,168,100,.3)" stroke-width=".8" pointer-events="none"/>
+            <!-- Sarcophagus glow -->
+            <rect class="sarc-glow" id="sarc-glow" x="364" y="120" width="38" height="22" rx="3"
+              fill="none" stroke="rgba(255,232,128,.6)" stroke-width="1.5"
+              filter="url(#chamber-glow)"/>
+
+            <text x="394" y="120" font-family="'Cormorant Garamond',serif" font-style="italic"
+              font-size="7" fill="rgba(255,232,128,.5)" text-anchor="middle">King's Chamber</text>
+            <text x="394" y="145" font-family="'DM Mono',monospace" font-size="6"
+              fill="rgba(255,232,128,.3)" text-anchor="middle">438 Hz</text>
+          </g>
+
+          <!-- Subterranean Chamber -->
+          <g class="chamber-group" id="ch-sub" data-chamber="sub">
+            <rect x="338" y="188" width="44" height="20" rx="1"
+              fill="rgba(80,60,30,.2)" stroke="rgba(160,120,50,.25)" stroke-width=".8" class="chamber-fill"/>
+            <text x="360" y="201" font-family="'Cormorant Garamond',serif" font-style="italic"
+              font-size="6" fill="rgba(160,120,50,.4)" text-anchor="middle">Sub Chamber</text>
+          </g>
+
+          <!-- ══ PASSAGES ══ -->
+          <!-- Descending passage to subterranean -->
+          <path d="M 390 210 L 338 188 L 340 188"
+            fill="none" stroke="rgba(160,120,50,.22)" stroke-width="2" stroke-linecap="round"/>
+          <!-- Ascending passage to Queen's -->
+          <path d="M 334 136 L 312 148 L 310 158 L 308 176"
+            fill="none" stroke="rgba(200,160,60,.18)" stroke-width="2" stroke-linecap="round"/>
+          <!-- Horizontal passage to Queen's -->
+          <line x1="308" y1="162" x2="280" y2="162"
+            stroke="rgba(200,160,60,.15)" stroke-width="2" stroke-linecap="round"/>
+          <!-- Passage from gallery to King's -->
+          <line x1="420" y1="88" x2="420" y2="108"
+            stroke="rgba(224,200,128,.2)" stroke-width="2" stroke-linecap="round"/>
+          <!-- Entrance passage (northern face, right side) -->
+          <path d="M 565 210 L 420 88"
+            fill="none" stroke="rgba(180,150,70,.15)" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- ══ STAR SHAFTS ══ -->
+          <!-- King's north shaft (toward Thuban / pole star) -->
+          <line class="shaft-beam" id="shaft-kn" x1="358" y1="120" x2="260" y2="18"
+            stroke="rgba(200,210,255,.4)" stroke-width="1.5" stroke-dasharray="3,4"/>
+          <!-- King's south shaft (toward Orion's Belt) -->
+          <line class="shaft-beam" id="shaft-ks" x1="430" y1="120" x2="530" y2="18"
+            stroke="rgba(255,232,128,.35)" stroke-width="1.5" stroke-dasharray="3,4"/>
+
+          <!-- Shaft labels -->
+          <text x="232" y="14" font-family="'Cormorant Garamond',serif" font-style="italic"
+            font-size="7" fill="rgba(200,210,255,.25)">Thuban</text>
+          <text x="530" y="14" font-family="'Cormorant Garamond',serif" font-style="italic"
+            font-size="7" fill="rgba(255,232,128,.22)">Orion</text>
+
+          <!-- ══ HIEROGLYPHIC DETAIL (corner ornament) ══ -->
+          <g transform="translate(18,18)" opacity=".3">
+            <path d="M0 0 L8 0 L8 12 L0 12 Z" fill="none" stroke="rgba(224,200,128,.5)" stroke-width=".7"/>
+            <circle cx="4" cy="4" r="2" fill="none" stroke="rgba(224,200,128,.5)" stroke-width=".7"/>
+            <line x1="2" y1="8" x2="6" y2="12" stroke="rgba(224,200,128,.5)" stroke-width=".7"/>
+          </g>
+          <g transform="translate(724,18)" opacity=".3">
+            <path d="M0 6 L8 0 L8 12 L0 6 Z" fill="none" stroke="rgba(224,200,128,.4)" stroke-width=".7"/>
+          </g>
+
+        </svg>
+      </div>
+
+      <!-- FREQUENCY TUNER -->
+      <div id="tuner-section">
+        <span id="tuner-label">Frequency</span>
+        <div id="tuner-outer">
+          <div id="tuner-fill"></div>
+          <div id="resonant-marker"></div>
+        </div>
+        <span id="tuner-freq">— Hz</span>
+        <span id="tuner-note">—</span>
+      </div>
+
+      <!-- CHAMBER PADS -->
+      <div id="chamber-grid">
+        <div class="cpad v-king"  data-sound="kings-tone"   data-key="q" data-hold="1"><div class="hold-pip"></div><div class="cpad-icon">🏛</div><div class="cpad-name">King's Chamber</div><div class="cpad-key">Q</div></div>
+        <div class="cpad v-queen" data-sound="queens-tone"  data-key="w" data-hold="1"><div class="hold-pip"></div><div class="cpad-icon">🔺</div><div class="cpad-name">Queen's Chamber</div><div class="cpad-key">W</div></div>
+        <div class="cpad v-grand" data-sound="gallery-echo" data-key="e" data-hold="1"><div class="hold-pip"></div><div class="cpad-icon">🌀</div><div class="cpad-name">Grand Gallery</div><div class="cpad-key">E</div></div>
+        <div class="cpad v-star"  data-sound="star-shaft"   data-key="r" data-hold="1"><div class="hold-pip"></div><div class="cpad-icon">⭐</div><div class="cpad-name">Star Shaft</div><div class="cpad-key">R</div></div>
+        <div class="cpad v-king"  data-sound="sarcophagus"  data-key="a"><div class="cpad-icon">⬛</div><div class="cpad-name">Sarcophagus Strike</div><div class="cpad-key">A</div></div>
+        <div class="cpad v-queen" data-sound="subterranean" data-key="s" data-hold="1"><div class="hold-pip"></div><div class="cpad-icon">🌑</div><div class="cpad-name">Subterranean</div><div class="cpad-key">S</div></div>
+        <div class="cpad v-grand" data-sound="pyramid-tone" data-key="d"><div class="cpad-icon">📐</div><div class="cpad-name">Pyramid Tone</div><div class="cpad-key">D</div></div>
+        <div class="cpad v-star"  data-sound="orion-drone"  data-key="f" data-hold="1"><div class="hold-pip"></div><div class="cpad-icon">🌌</div><div class="cpad-name">Orion Drone</div><div class="cpad-key">F</div></div>
+      </div>
+
+      <!-- KEYBOARD -->
+      <div id="kb-section" style="position:relative;">
+        <div id="oct-outer">
+          <div id="oct-wheel"><div id="oct-wheel-inner"></div></div>
+          <div id="oct-lbl">Oct</div>
+        </div>
+        <div id="keyboard"></div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div id="panel">
+      <div class="psec">
+        <div class="ptitle">✦ Resonance Mode</div>
+        <button class="pBtn active" data-mode="stone">Granite Stone</button>
+        <button class="pBtn" data-mode="chamber">King's Chamber</button>
+        <button class="pBtn" data-mode="passage">Long Passage</button>
+        <button class="pBtn" data-mode="sarcophagus">Sarcophagus</button>
+      </div>
+      <div class="psec">
+        <div class="ptitle">✦ Acoustics</div>
+        <div class="knob-row">
+          <div class="kg">
+            <canvas class="knob" id="k-reverb"  width="44" height="44" data-min="0"    data-max="1"   data-val="0.75" data-color="#e0c880"></canvas>
+            <div class="kl">Hall</div><div class="kv" id="v-reverb">0.75</div>
+          </div>
+          <div class="kg">
+            <canvas class="knob" id="k-stone"   width="44" height="44" data-min="0"    data-max="1"   data-val="0.6"  data-color="#b89840"></canvas>
+            <div class="kl">Stone</div><div class="kv" id="v-stone">0.60</div>
+          </div>
+        </div>
+        <div class="knob-row">
+          <div class="kg">
+            <canvas class="knob" id="k-inharm"  width="44" height="44" data-min="0"    data-max="1"   data-val="0.35" data-color="#d0c8c0"></canvas>
+            <div class="kl">Grain</div><div class="kv" id="v-inharm">0.35</div>
+          </div>
+          <div class="kg">
+            <canvas class="knob" id="k-cosmic"  width="44" height="44" data-min="0"    data-max="1"   data-val="0.45" data-color="#c0d0f8"></canvas>
+            <div class="kl">Cosmic</div><div class="kv" id="v-cosmic">0.45</div>
+          </div>
+        </div>
+      </div>
+      <div class="psec">
+        <div class="ptitle">✦ Voice</div>
+        <div class="knob-row">
+          <div class="kg">
+            <canvas class="knob" id="k-decay"   width="44" height="44" data-min="0.5"  data-max="12"  data-val="5.5"  data-color="#806820"></canvas>
+            <div class="kl">Ring</div><div class="kv" id="v-decay">5.50</div>
+          </div>
+          <div class="kg">
+            <canvas class="knob" id="k-shimmer" width="44" height="44" data-min="0"    data-max="1"   data-val="0.5"  data-color="#f8e8c0"></canvas>
+            <div class="kl">Shimmer</div><div class="kv" id="v-shimmer">0.50</div>
+          </div>
+        </div>
+      </div>
+      <div id="lore-display">
+        <div id="lore-note">—</div>
+        <div id="lore-freq2">— Hz</div>
+        <div id="lore-text">built in stone<br>to sing forever</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="wave-bar"><canvas id="wave-canvas"></canvas></div>
+
+  <div id="controls">
+    <div class="kg">
+      <canvas class="knob" id="k-sub"   width="38" height="38" data-min="0" data-max="1" data-val="0.4"  data-color="#4a3808"></canvas>
+      <div class="kl">Sub</div><div class="kv" id="v-sub">0.40</div>
+    </div>
+    <div class="kg">
+      <canvas class="knob" id="k-chorus" width="38" height="38" data-min="0" data-max="1" data-val="0.45" data-color="#b89840"></canvas>
+      <div class="kl">Width</div><div class="kv" id="v-chorus">0.45</div>
+    </div>
+    <div class="kg">
+      <canvas class="knob" id="k-overtone" width="38" height="38" data-min="0" data-max="1" data-val="0.5" data-color="#e0c880"></canvas>
+      <div class="kl">Overtone</div><div class="kv" id="v-overtone">0.50</div>
+    </div>
+    <div class="cdiv"></div>
+    <div style="font-family:var(--serif);font-style:italic;font-size:11px;color:rgba(224,200,128,.25);letter-spacing:1px;">
+      the King's Chamber sings at 438 Hz
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// KHUFU — The Singing Pyramid
+//
+// The Great Pyramid of Giza (Khufu, c.2560 BC) has been
+// measured by acoustic researchers. The King's Chamber
+// resonates at approximately 438 Hz — almost exactly A4.
+// The chamber's granite walls, floor, and ceiling create
+// standing waves that amplify specific frequencies.
+// The granite sarcophagus, when struck, rings for seconds.
+// Some researchers believe the entire structure was designed
+// as an acoustic instrument of unknown purpose.
+// ══════════════════════════════════════════════════════════════
+
+let actx=null, convolver=null, analyser=null;
+const activeVoices=new Map();
+const holdNodes=new Map();
+
+// The resonant frequencies of the pyramid's chambers
+// (approximate, based on acoustic research)
+const PYRAMID_FREQS={
+  king:      438,    // King's Chamber fundamental — almost exactly A4
+  queen:     285,    // Queen's Chamber estimated resonance
+  gallery:   122,    // Grand Gallery — long passage resonance
+  sub:       68,     // Subterranean chamber — very low
+  sarcophagus: 438,  // The sarcophagus itself rings at ~438 Hz when struck
+};
+
+// Frequency slider range
+const FREQ_MIN=50, FREQ_MAX=900;
+let currentFreq=438;
+let freqDrag=false;
+
+function getCtx(){
+  if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
+  if(actx.state==='suspended')actx.resume();
+  if(!convolver)buildReverb();
+  if(!analyser){analyser=actx.createAnalyser();analyser.fftSize=512;analyser.connect(actx.destination);}
+  return actx;
+}
+
+const P={reverb:.75,stone:.6,inharm:.35,cosmic:.45,decay:5.5,shimmer:.5,sub:.4,chorus:.45,overtone:.5,mode:'stone'};
+const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function midiToFreq(n){return 440*Math.pow(2,(n-69)/12);}
+function freqToNote(f){const n=12*Math.log2(f/440)+69;return NOTE_NAMES[Math.round(n)%12]+(Math.floor(Math.round(n)/12)-1);}
+
+const LORE=[
+  'built in stone\nto sing forever',
+  'the granite remembers\nevery frequency',
+  'Herodotus heard it\nbut did not understand',
+  'the chamber amplifies\nA above middle C',
+  'the sarcophagus rings\nwhen you strike it',
+  'the shafts point\nto Orion and Thuban',
+];
+
+// ── Reverb: stone pyramid chamber ──
+// Very long, dense, with strong modal resonances
+function buildReverb(){
+  const c=actx,dur=10,len=c.sampleRate*dur,buf=c.createBuffer(2,len,c.sampleRate);
+  for(let ch=0;ch<2;ch++){
+    const d=buf.getChannelData(ch);
+    for(let i=0;i<len;i++){
+      const env=Math.pow(1-i/len,1.02);
+      d[i]=(Math.random()*2-1)*env*(0.5+0.5*Math.sin(i*.00004));
+    }
+    // Stone wall reflections — parallel walls create flutter echo
+    [.08,.16,.24,.32,.4,.55,.7,.9,1.1,1.4].forEach(t=>{
+      const idx=Math.floor(t*c.sampleRate);
+      if(idx<len)d[idx]+=(Math.random()*2-1)*.45;
+    });
+  }
+  if(convolver)try{convolver.disconnect()}catch(e){}
+  convolver=c.createConvolver();convolver.buffer=buf;
+  convolver.connect(c.destination);
+}
+
+function routeOut(c,node){
+  const dry=c.createGain();dry.gain.value=1-P.reverb*.9;
+  const wet=c.createGain();wet.gain.value=P.reverb*.9;
+  node.connect(dry);dry.connect(analyser);
+  node.connect(wet);wet.connect(convolver);
+  return{dry,wet};
+}
+
+// ══════════════════════════════════════════════════════════════
+// PYRAMID STONE VOICE
+//
+// The acoustic signature of a stone chamber:
+// - Long decay (granite is hard, low absorption)
+// - Modal resonances (standing waves between parallel walls)
+// - Inharmonic overtones (stone is not perfectly elastic)
+// - Flutter echo between parallel granite walls
+// - The 438Hz resonance of the King's Chamber
+// ══════════════════════════════════════════════════════════════
+function ringPyramid(freq, vel=0.75, chamberName='king'){
+  const c=getCtx();
+  const now=c.currentTime;
+  const key=`py-${Math.round(freq)}`;
+
+  if(activeVoices.has(key)){
+    const prev=activeVoices.get(key);
+    prev.master.gain.setTargetAtTime(0,now,.2);
+    setTimeout(()=>prev.nodes.forEach(n=>{try{n.stop()}catch(e){}}),3000);
+    activeVoices.delete(key);
+  }
+
+  const nodes=[],master=c.createGain();master.gain.value=0;
+  master.gain.setValueAtTime(0,now);
+  master.gain.linearRampToValueAtTime(vel*.8,now+.005);
+
+  // ── MODE CHARACTER ──
+  // Each chamber has different mode structure based on its dimensions
+  let modes,mAmps,mDecays;
+  switch(P.mode){
+    case 'stone':
+      // Granite stone plate modes
+      modes=[1, 2.756, 5.404, 8.933, 13.34, 18.64];
+      mAmps=[.68,.38,.22,.13,.07,.035];
+      mDecays=[1,.82,.64,.48,.34,.22];
+      break;
+    case 'chamber':
+      // Rectangular room modes — includes room modes at sub-frequencies
+      modes=[1, 1.414, 1.732, 2, 2.449, 2.828, 3, 3.162, 3.606, 4];
+      mAmps=[.65,.3,.2,.25,.15,.18,.12,.1,.08,.06];
+      mDecays=[1,.9,.8,.85,.7,.75,.65,.6,.55,.5];
+      break;
+    case 'passage':
+      // Long narrow passage: fundamental + odd harmonics
+      modes=[1,3,5,7,9,11,13];
+      mAmps=[.6,.4,.25,.16,.1,.06,.03];
+      mDecays=[1,.85,.7,.58,.45,.35,.25];
+      break;
+    case 'sarcophagus':
+      // Hollow granite box — actual struck-stone modes
+      modes=[1, 2.756, 5.4, 8.93, 13.3, 18.6, 24.8];
+      mAmps=[.7,.42,.24,.13,.07,.04,.02];
+      mDecays=[1,.84,.68,.52,.38,.26,.16];
+      break;
+  }
+
+  modes.forEach((m,i)=>{
+    const f=freq*m*(1+(Math.random()-.5)*P.inharm*.04);
+    const osc=c.createOscillator();osc.type='sine';osc.frequency.value=f;
+
+    // Shimmer LFO per mode
+    if(P.shimmer>.02){
+      const lfo=c.createOscillator();lfo.frequency.value=.05+i*.018+Math.random()*.015;
+      const lG=c.createGain();lG.gain.value=P.shimmer*(2+i*.4);
+      lfo.connect(lG);lG.connect(osc.detune);lfo.start(now);nodes.push(lfo);
+    }
+
+    // Cosmic: adds celestial shimmer (the star shaft frequencies)
+    if(P.cosmic>.05&&i===0){
+      const cosmicF=freq*1.618; // golden ratio — some researchers believe this is built in
+      const cOsc=c.createOscillator();cOsc.type='sine';cOsc.frequency.value=cosmicF;
+      const cG=c.createGain();cG.gain.value=vel*P.cosmic*.12;
+      cG.gain.exponentialRampToValueAtTime(.001,now+P.decay*.5);
+      cOsc.connect(cG);cG.connect(master);cOsc.start(now);cOsc.stop(now+P.decay*.55);nodes.push(cOsc);
+    }
+
+    const g=c.createGain();
+    g.gain.setValueAtTime(vel*mAmps[i]*P.stone,now+.001);
+    g.gain.exponentialRampToValueAtTime(.001,now+P.decay*mDecays[i]);
+    osc.connect(g);g.connect(master);osc.start(now);
+    osc.stop(now+P.decay*mDecays[i]+.2);nodes.push(osc);
+  });
+
+  // ── STONE STRIKE TRANSIENT ──
+  const sLen=Math.floor(c.sampleRate*.03);
+  const sBuf=c.createBuffer(1,sLen,c.sampleRate);
+  const sd=sBuf.getChannelData(0);
+  for(let i=0;i<sLen;i++)sd[i]=(Math.random()*2-1)*Math.exp(-i/(c.sampleRate*.006));
+  const ss=c.createBufferSource();ss.buffer=sBuf;
+  const sBpf=c.createBiquadFilter();sBpf.type='bandpass';sBpf.frequency.value=freq*2.2;sBpf.Q.value=1.5;
+  const sG=c.createGain();sG.gain.value=vel*.45;
+  ss.connect(sBpf);sBpf.connect(sG);sG.connect(master);
+  ss.start(now);ss.stop(now+.035);nodes.push(ss);
+
+  // ── OVERTONE SERIES ──
+  if(P.overtone>.02){
+    for(let ov=2;ov<=8;ov++){
+      const ovOsc=c.createOscillator();ovOsc.type='sine';ovOsc.frequency.value=freq*ov;
+      const ovG=c.createGain();
+      ovG.gain.setValueAtTime(vel*P.overtone*(0.2/ov),now+.002);
+      ovG.gain.exponentialRampToValueAtTime(.001,now+P.decay*(1-ov*.08));
+      ovOsc.connect(ovG);ovG.connect(master);ovOsc.start(now);ovOsc.stop(now+P.decay*(1-ov*.08)+.1);nodes.push(ovOsc);
+    }
+  }
+
+  // ── SUB ──
+  if(P.sub>.02){
+    const sub=c.createOscillator();sub.type='sine';sub.frequency.value=freq*.5;
+    const subG=c.createGain();subG.gain.value=0;
+    subG.gain.linearRampToValueAtTime(vel*P.sub*.35,now+.01);
+    subG.gain.exponentialRampToValueAtTime(.001,now+P.decay*.55);
+    sub.connect(subG);subG.connect(master);sub.start(now);sub.stop(now+P.decay*.6);nodes.push(sub);
+  }
+
+  // ── CHORUS ──
+  if(P.chorus>.02){
+    const dl=c.createDelay(.05);dl.delayTime.value=.028;
+    const cl=c.createOscillator();cl.frequency.value=.2;
+    const cg=c.createGain();cg.gain.value=.006*P.chorus;
+    cl.connect(cg);cg.connect(dl.delayTime);
+    const cm=c.createGain();cm.gain.value=P.chorus*.45;
+    master.connect(dl);dl.connect(cm);cm.connect(master);cl.start(now);nodes.push(cl);
+  }
+
+  // ── TONE FILTER ──
+  const lpf=c.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=400+freq*.8;lpf.Q.value=.8;
+  master.connect(lpf);
+  const r=routeOut(c,lpf);
+
+  activeVoices.set(key,{master,lpf,nodes,...r});
+  updateDisplay(freq,chamberName);
+  animatePyramid(chamberName);
+  document.getElementById('power-dot').classList.add('on');
+  document.getElementById('hs-stone').textContent='SINGING';
+  document.getElementById('hs-stone').className='lit-c';
+
+  clearTimeout(window._stoneT);
+  window._stoneT=setTimeout(()=>{
+    if(activeVoices.size===0&&holdNodes.size===0){
+      document.getElementById('power-dot').classList.remove('on');
+      document.getElementById('hs-stone').textContent='silent';
+      document.getElementById('hs-stone').className='';
+    }
+  },P.decay*800);
+
+  return {master,lpf,nodes,...r};
+}
+
+function updateDisplay(freq,chamber){
+  const note=freqToNote(freq);
+  document.getElementById('lore-note').textContent=note.slice(0,-1);
+  document.getElementById('lore-freq2').textContent=Math.round(freq)+' Hz';
+  document.getElementById('lore-text').innerHTML=LORE[Math.floor(Math.random()*LORE.length)].replace('\n','<br>');
+  document.getElementById('hs-chamber').textContent=chamber||'—';
+  document.getElementById('hs-freq').textContent=Math.round(freq)+'Hz';
+  document.getElementById('hs-chamber').className='lit';
+  document.getElementById('hs-freq').className='lit-c';
+  clearTimeout(window._hdrT);window._hdrT=setTimeout(()=>{document.getElementById('hs-chamber').className='';document.getElementById('hs-freq').className='';},600);
+}
+
+function animatePyramid(chamber){
+  // Light up the correct chamber
+  ['king','queen','gallery','sub'].forEach(ch=>{
+    const g=document.getElementById(`ch-${ch}`);
+    if(g){g.classList.remove('ringing','active-chamber');}
+  });
+  const activeG=document.getElementById(`ch-${chamber}`)||document.getElementById('ch-king');
+  if(activeG){
+    activeG.classList.add('ringing');
+    setTimeout(()=>{activeG.classList.remove('ringing');activeG.classList.add('active-chamber');},200);
+    setTimeout(()=>activeG.classList.remove('active-chamber'),P.decay*700);
+  }
+
+  // Sarcophagus glow
+  const sg=document.getElementById('sarc-glow');
+  if(sg){
+    sg.classList.add('on');
+    setTimeout(()=>sg.classList.remove('on'),P.decay*600);
+  }
+
+  // Star shaft beams
+  document.querySelectorAll('.shaft-beam').forEach(b=>{
+    b.classList.add('on');
+    setTimeout(()=>b.classList.remove('on'),P.decay*400);
+  });
+
+  // Pyramid wave rings from apex
+  addPyramidWaves();
+
+  // Apex glow
+  const apex=document.getElementById('apex-glow-dot');
+  if(apex){
+    apex.setAttribute('fill','rgba(255,232,100,.6)');
+    setTimeout(()=>apex.setAttribute('fill','rgba(255,232,100,.0)'),P.decay*300);
+  }
+}
+
+function addPyramidWaves(){
+  const g=document.getElementById('wave-group');
+  for(let w=0;w<4;w++){
+    const el=document.createElementNS('http://www.w3.org/2000/svg','path');
+    // Triangle wave expanding from apex
+    const s=20+w*18;
+    el.setAttribute('d',`M 380 22 L ${380+s} ${22+s*1.1} L ${380-s} ${22+s*1.1} Z`);
+    el.setAttribute('fill','none');
+    el.setAttribute('stroke',w<2?'rgba(224,200,128,.5)':'rgba(255,240,160,.3)');
+    el.setAttribute('stroke-width','1');
+    el.setAttribute('class','pyramid-wave');
+    el.style.animationDelay=(w*.18)+'s';
+    el.style.transformOrigin='380px 22px';
+    g.appendChild(el);
+    setTimeout(()=>el.remove(),1600);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CHAMBER PADS — each triggers the actual resonance of its chamber
+// ══════════════════════════════════════════════════════════════
+const CHAMBER_SOUNDS={
+  'kings-tone': c=>{
+    const v=ringPyramid(438,.78,'king');
+    return v;
+  },
+  'queens-tone': c=>{
+    return ringPyramid(285,.72,'queen');
+  },
+  'gallery-echo': c=>{
+    // Grand Gallery: resonant echoes, ascending
+    const now=c.currentTime,nodes=[],master=c.createGain();master.gain.value=0;
+    master.gain.linearRampToValueAtTime(.55,now+.2);
+    // Flutter echo between parallel stone walls
+    [0,.08,.16,.24,.32].forEach((t,i)=>{
+      const osc=c.createOscillator();osc.type='sine';osc.frequency.value=122*(1+i*.02);
+      const g=c.createGain();
+      g.gain.setValueAtTime(0,now+t);g.gain.linearRampToValueAtTime(.4-i*.07,now+t+.05);
+      g.gain.exponentialRampToValueAtTime(.001,now+t+P.decay*.6);
+      osc.connect(g);g.connect(master);osc.start(now+t);osc.stop(now+t+P.decay*.65);nodes.push(osc);
+    });
+    const lpf=c.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=1200;
+    master.connect(lpf);routeOut(c,lpf);
+    animatePyramid('gallery');
+    return{nodes,master};
+  },
+  'star-shaft': c=>{
+    // Star shafts — cosmic high frequencies
+    const now=c.currentTime,nodes=[],master=c.createGain();master.gain.value=0;
+    master.gain.linearRampToValueAtTime(.45,now+.5);
+    // Orion Belt frequencies (metaphorical) + actual shaft resonance
+    const cosmicFreqs=[438*1.618,438*2.618,438*.618,285*1.618];
+    cosmicFreqs.forEach((f,i)=>{
+      const osc=c.createOscillator();osc.type='sine';osc.frequency.value=f;
+      const lfo=c.createOscillator();lfo.frequency.value=.06+i*.02;
+      const lG=c.createGain();lG.gain.value=3;
+      lfo.connect(lG);lG.connect(osc.detune);
+      const g=c.createGain();g.gain.value=[.35,.22,.28,.18][i];
+      osc.connect(g);g.connect(master);osc.start(now);lfo.start(now);nodes.push(osc,lfo);
+    });
+    const hpf=c.createBiquadFilter();hpf.type='highpass';hpf.frequency.value=400;
+    master.connect(hpf);routeOut(c,hpf);
+    document.querySelectorAll('.shaft-beam').forEach(b=>{b.classList.add('on');});
+    return{nodes,master};
+  },
+  'sarcophagus': c=>{
+    // Actual sarcophagus strike — similar to quartz bowl physics
+    // The granite box rings for many seconds when struck
+    ringPyramid(438,.85,'king');
+    return null;
+  },
+  'subterranean': c=>{
+    // Deep low rumble — unfinished subterranean chamber
+    const now=c.currentTime,nodes=[],master=c.createGain();master.gain.value=0;
+    master.gain.linearRampToValueAtTime(.5,now+1.0);
+    [68,34,102,136].forEach((f,i)=>{
+      const osc=c.createOscillator();osc.type=i===0?'triangle':'sine';osc.frequency.value=f;
+      const lfo=c.createOscillator();lfo.frequency.value=.03+i*.01;
+      const lG=c.createGain();lG.gain.value=4;
+      lfo.connect(lG);lG.connect(osc.frequency);
+      const g=c.createGain();g.gain.value=[.55,.3,.18,.1][i];
+      osc.connect(g);g.connect(master);osc.start(now);lfo.start(now);nodes.push(osc,lfo);
+    });
+    const lpf=c.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=400;
+    master.connect(lpf);routeOut(c,lpf);
+    animatePyramid('sub');
+    return{nodes,master};
+  },
+  'pyramid-tone': c=>{
+    // The full pyramid as instrument — all chambers resonating
+    [438,285,122,68].forEach((f,i)=>{
+      setTimeout(()=>ringPyramid(f,.65-i*.1,['king','queen','gallery','sub'][i]),i*200);
+    });
+    return null;
+  },
+  'orion-drone': c=>{
+    // Three stars of Orion's Belt ~ three pyramids
+    // We use the actual frequency ratios from star positions
+    const now=c.currentTime,nodes=[],master=c.createGain();master.gain.value=0;
+    master.gain.linearRampToValueAtTime(.5,now+.8);
+    // Three pyramid resonances, slightly apart (like the three pyramids)
+    [438,432,444].forEach((f,i)=>{
+      const osc=c.createOscillator();osc.type='sine';osc.frequency.value=f;
+      const lfo=c.createOscillator();lfo.frequency.value=.04+i*.015;
+      const lG=c.createGain();lG.gain.value=2;
+      lfo.connect(lG);lG.connect(osc.detune);
+      const g=c.createGain();g.gain.value=[.5,.38,.38][i];
+      osc.connect(g);g.connect(master);osc.start(now);lfo.start(now);nodes.push(osc,lfo);
+    });
+    const lpf=c.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=2000;
+    master.connect(lpf);routeOut(c,lpf);
+    document.querySelectorAll('.shaft-beam').forEach(b=>b.classList.add('on'));
+    return{nodes,master};
+  },
+};
+
+function triggerPad(padEl,sound){
+  const c=getCtx();
+  const isHold=padEl.dataset.hold==='1';
+  if(isHold&&holdNodes.has(sound)){
+    const h=holdNodes.get(sound);
+    h.master.gain.setTargetAtTime(0,c.currentTime,.5);
+    setTimeout(()=>h.nodes.forEach(n=>{try{n.stop()}catch(e){}}),3000);
+    holdNodes.delete(sound);padEl.classList.remove('hold-on');
+    document.querySelectorAll('.shaft-beam').forEach(b=>b.classList.remove('on'));
+    if(holdNodes.size===0&&activeVoices.size===0){document.getElementById('power-dot').classList.remove('on');document.getElementById('hs-stone').textContent='silent';document.getElementById('hs-stone').className='';}
+    return;
+  }
+  const fn=CHAMBER_SOUNDS[sound];if(!fn)return;
+  const result=fn(c);
+  if(isHold&&result){holdNodes.set(sound,result);padEl.classList.add('hold-on');}
+  padEl.classList.add('hit');clearTimeout(padEl._t);padEl._t=setTimeout(()=>padEl.classList.remove('hit'),180);
+  document.getElementById('power-dot').classList.add('on');
+}
+
+document.querySelectorAll('.cpad').forEach(pad=>{
+  pad.addEventListener('mousedown',e=>{e.preventDefault();getCtx();triggerPad(pad,pad.dataset.sound);});
+  pad.addEventListener('touchstart',e=>{e.preventDefault();getCtx();triggerPad(pad,pad.dataset.sound);},{passive:false});
+});
+
+// Click chambers directly on SVG
+document.querySelectorAll('.chamber-group').forEach(g=>{
+  g.addEventListener('click',()=>{
+    getCtx();
+    const ch=g.dataset.chamber;
+    const freq=PYRAMID_FREQS[ch]||438;
+    const v=ringPyramid(freq,.75,ch);
+    if(v){activeVoices.set(`py-click-${ch}`,v);}
+  });
+});
+
+// ── Frequency tuner ──
+(function(){
+  const outer=document.getElementById('tuner-outer');
+  let drag=false;
+  function u(x){
+    const rect=outer.getBoundingClientRect();
+    const pct=Math.max(0,Math.min(1,(x-rect.left)/rect.width));
+    currentFreq=FREQ_MIN+Math.pow(pct,2)*(FREQ_MAX-FREQ_MIN);
+    document.getElementById('tuner-fill').style.width=(pct*100)+'%';
+    document.getElementById('tuner-freq').textContent=Math.round(currentFreq)+' Hz';
+    document.getElementById('tuner-note').textContent=freqToNote(currentFreq);
+    // Mark the resonant 438 Hz position
+    const markerPct=Math.sqrt((438-FREQ_MIN)/(FREQ_MAX-FREQ_MIN));
+    document.getElementById('resonant-marker').style.left=(markerPct*100)+'%';
+  }
+  // Set initial position
+  const initPct=Math.sqrt((currentFreq-FREQ_MIN)/(FREQ_MAX-FREQ_MIN));
+  document.getElementById('tuner-fill').style.width=(initPct*100)+'%';
+  document.getElementById('tuner-freq').textContent='438 Hz';
+  document.getElementById('tuner-note').textContent='A4';
+  const markerPct=Math.sqrt((438-FREQ_MIN)/(FREQ_MAX-FREQ_MIN));
+  document.getElementById('resonant-marker').style.left=(markerPct*100)+'%';
+
+  outer.addEventListener('mousedown',e=>{drag=true;u(e.clientX);e.preventDefault();});
+  window.addEventListener('mousemove',e=>{if(drag)u(e.clientX);});
+  window.addEventListener('mouseup',()=>{drag=false;});
+  outer.addEventListener('touchstart',e=>{drag=true;u(e.touches[0].clientX);e.preventDefault();},{passive:false});
+  window.addEventListener('touchmove',e=>{if(drag)u(e.touches[0].clientX);},{passive:false});
+  window.addEventListener('touchend',()=>{drag=false;});
+  // Click on tuner to immediately ring at that frequency
+  outer.addEventListener('click',e=>{u(e.clientX);getCtx();ringPyramid(currentFreq,.75);});
+})();
+
+// ── Keyboard ──
+const WHITE_KEYS=[0,2,4,5,7,9,11],BLACK_SLOTS=[1,3,null,6,8,10,null];
+const KB_WHITE={a:0,s:1,d:2,f:3,g:4,h:5,j:6,k:7};
+const KB_BLACK={w:0,e:1,t:3,y:4,u:5};
+const PAD_KB={q:'kings-tone',w:'queens-tone',e:'gallery-echo',r:'star-shaft',a:'sarcophagus',s:'subterranean',d:'pyramid-tone',f:'orion-drone'};
+const PAD_MAP={};document.querySelectorAll('.cpad').forEach(p=>{PAD_MAP[p.dataset.key]=p;});
+let kbOct=4;const OMIN=1,OMAX=7,SH=18;
+
+function buildKB(){
+  const el=document.getElementById('keyboard');el.innerHTML='';
+  const base=kbOct*12+12;
+  for(let i=0;i<8;i++){const n=base+WHITE_KEYS[i%7];const wk=document.createElement('div');wk.className='key white';wk.dataset.note=n;wk.innerHTML=`<span class="key-lbl">${'ASDFGHJK'[i]}</span>`;el.appendChild(wk);}
+  requestAnimationFrame(()=>{
+    el.querySelectorAll('.key.white').forEach((wk,i)=>{const slot=BLACK_SLOTS[i%7];if(slot==null)return;const n=base+slot;const bk=document.createElement('div');bk.className='key black';bk.dataset.note=n;bk.style.left=(wk.offsetLeft+wk.offsetWidth*.6)+'px';const lbls=['W','E','','T','Y','U',''];if(lbls[i])bk.innerHTML=`<span class="key-lbl">${lbls[i]}</span>`;el.appendChild(bk);});
+    el.querySelectorAll('.key').forEach(k=>{
+      const n=parseInt(k.dataset.note);const freq=midiToFreq(n);
+      k.addEventListener('mousedown',e=>{e.preventDefault();getCtx();const v=ringPyramid(freq,.7);if(v)activeVoices.set('kb-'+n,v);k.classList.add('active');});
+      k.addEventListener('mouseup',()=>{const v=activeVoices.get('kb-'+n);if(v){v.master.gain.setTargetAtTime(0,actx.currentTime,.3);setTimeout(()=>v.nodes.forEach(nd=>{try{nd.stop()}catch(e){}}),2000);activeVoices.delete('kb-'+n);}k.classList.remove('active');});
+      k.addEventListener('mouseleave',()=>k.classList.remove('active'));
+      k.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();getCtx();const v=ringPyramid(freq,.7);if(v)activeVoices.set('kb-'+n,v);k.classList.add('active');},{passive:false});
+      k.addEventListener('touchend',e=>{e.preventDefault();k.classList.remove('active');},{passive:false});
+    });
+  });
+}
+function buildOctWheel(){
+  const inner=document.getElementById('oct-wheel-inner');inner.innerHTML='';
+  for(let o=OMAX;o>=OMIN;o--){const s=document.createElement('div');s.className='ow-slot'+(o===kbOct?' cur':'');s.textContent='C'+o;s.dataset.oct=o;inner.appendChild(s);}
+  scrollOW();
+}
+function scrollOW(){
+  const inner=document.getElementById('oct-wheel-inner');
+  const wH=document.getElementById('oct-wheel').clientHeight||78;
+  inner.style.transform=`translateY(${wH/2-SH/2-(OMAX-kbOct)*SH}px)`;
+  inner.querySelectorAll('.ow-slot').forEach(s=>s.classList.toggle('cur',parseInt(s.dataset.oct)===kbOct));
+}
+(function(){const wh=document.getElementById('oct-wheel');let sy=null,so=null;wh.addEventListener('mousedown',e=>{sy=e.clientY;so=kbOct;e.preventDefault();});document.addEventListener('mousemove',e=>{if(sy===null)return;const d=Math.round((sy-e.clientY)/SH);const n=Math.max(OMIN,Math.min(OMAX,so+d));if(n!==kbOct){kbOct=n;scrollOW();buildKB();}});document.addEventListener('mouseup',()=>{sy=null;});wh.addEventListener('wheel',e=>{e.preventDefault();kbOct=Math.max(OMIN,Math.min(OMAX,kbOct+(e.deltaY>0?-1:1)));scrollOW();buildKB();},{passive:false});wh.addEventListener('click',e=>{const s=e.target.closest('.ow-slot');if(s){kbOct=parseInt(s.dataset.oct);scrollOW();buildKB();}});})();
+
+document.addEventListener('keydown',e=>{
+  if(e.repeat||e.target.tagName==='INPUT')return;
+  const key=e.key.toLowerCase();
+  if(key==='z'){kbOct=Math.max(OMIN,kbOct-1);scrollOW();buildKB();return;}
+  if(key==='x'){kbOct=Math.min(OMAX,kbOct+1);scrollOW();buildKB();return;}
+  if(PAD_KB[key]&&PAD_MAP[key]){getCtx();triggerPad(PAD_MAP[key],PAD_KB[key]);return;}
+  const base=kbOct*12+12;let n=null;
+  if(KB_WHITE[key]!==undefined)n=base+WHITE_KEYS[KB_WHITE[key]];
+  else if(KB_BLACK[key]!==undefined){const s=BLACK_SLOTS[KB_BLACK[key]];if(s!=null)n=base+s;}
+  if(n!==null){getCtx();const v=ringPyramid(midiToFreq(n),.7);if(v)activeVoices.set('kd-'+n,v);document.getElementById('keyboard')?.querySelectorAll('.key').forEach(k=>{if(parseInt(k.dataset.note)===n)k.classList.add('active');});}
+});
+document.addEventListener('keyup',e=>{
+  document.getElementById('keyboard')?.querySelectorAll('.key.active').forEach(k=>k.classList.remove('active'));
+});
+
+// ── Panel buttons ──
+document.querySelectorAll('[data-mode]').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('[data-mode]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');P.mode=btn.dataset.mode;});});
+
+// ── Knobs ──
+function setupKnobs(){
+  document.querySelectorAll('canvas.knob').forEach(canvas=>{
+    const id=canvas.id,min=parseFloat(canvas.dataset.min),max=parseFloat(canvas.dataset.max);
+    let val=parseFloat(canvas.dataset.val);const color=canvas.dataset.color||'#e0c880';
+    const valEl=document.getElementById('v-'+id.replace('k-',''));if(!valEl)return;
+    function draw(){
+      const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,cx=w/2,cy=h/2,r=w*.38;
+      ctx.clearRect(0,0,w,h);
+      const sA=Math.PI*.75,eA=Math.PI*2.25,t=(val-min)/(max-min),cA=sA+t*(eA-sA);
+      ctx.beginPath();ctx.arc(cx,cy,r,sA,eA);ctx.strokeStyle='rgba(224,200,128,.1)';ctx.lineWidth=3;ctx.lineCap='round';ctx.stroke();
+      ctx.beginPath();ctx.arc(cx,cy,r,sA,cA);ctx.strokeStyle=color;ctx.lineWidth=3;ctx.shadowColor=color;ctx.shadowBlur=5;ctx.stroke();ctx.shadowBlur=0;
+      const dx=cx+r*Math.cos(cA),dy=cy+r*Math.sin(cA);
+      ctx.beginPath();ctx.arc(dx,dy,2.5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fillStyle='#070608';ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy,1.5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+    }
+    let dragY=null,dragVal=null;
+    canvas.addEventListener('mousedown',e=>{dragY=e.clientY;dragVal=val;e.preventDefault();});
+    document.addEventListener('mousemove',e=>{if(dragY===null)return;val=Math.max(min,Math.min(max,dragVal+(dragY-e.clientY)*(max-min)/130));draw();onKnob(id,val,valEl);});
+    document.addEventListener('mouseup',()=>{dragY=null;});
+    draw();onKnob(id,val,valEl);
+  });
+}
+function onKnob(id,val,el){
+  const vt=val.toFixed(2);
+  const map={
+    'k-reverb':   v=>{P.reverb=v;   el.textContent=vt;},
+    'k-stone':    v=>{P.stone=v;    el.textContent=vt;},
+    'k-inharm':   v=>{P.inharm=v;   el.textContent=vt;},
+    'k-cosmic':   v=>{P.cosmic=v;   el.textContent=vt;},
+    'k-decay':    v=>{P.decay=v;    el.textContent=vt;},
+    'k-shimmer':  v=>{P.shimmer=v;  el.textContent=vt;},
+    'k-sub':      v=>{P.sub=v;      el.textContent=vt;},
+    'k-chorus':   v=>{P.chorus=v;   el.textContent=vt;},
+    'k-overtone': v=>{P.overtone=v; el.textContent=vt;},
+  };
+  if(map[id])map[id](val);
+}
+
+// ── Waveform ──
+const waveCanvas=document.getElementById('wave-canvas');
+const wCtx=waveCanvas.getContext('2d');
+function resizeWave(){waveCanvas.width=waveCanvas.offsetWidth;waveCanvas.height=waveCanvas.offsetHeight;}
+function drawWave(){
+  requestAnimationFrame(drawWave);
+  const W=waveCanvas.width,H=waveCanvas.height;
+  wCtx.clearRect(0,0,W,H);
+  if(!analyser)return;
+  const buf=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(buf);
+  const grad=wCtx.createLinearGradient(0,0,W,0);
+  grad.addColorStop(0,'rgba(224,200,128,.0)');
+  grad.addColorStop(.2,'rgba(224,200,128,.55)');
+  grad.addColorStop(.5,'rgba(255,240,160,.6)');
+  grad.addColorStop(.8,'rgba(192,160,80,.5)');
+  grad.addColorStop(1,'rgba(192,160,80,.0)');
+  wCtx.strokeStyle=grad;wCtx.lineWidth=1.3;
+  wCtx.shadowColor='rgba(224,200,128,.35)';wCtx.shadowBlur=5;
+  wCtx.beginPath();
+  const step=W/buf.length;
+  for(let i=0;i<buf.length;i++){const x=i*step,y=(buf[i]/128-1)*(H*.44)+H/2;i===0?wCtx.moveTo(x,y):wCtx.lineTo(x,y);}
+  wCtx.stroke();wCtx.shadowBlur=0;
+}
+
+// ── Background: star field over desert night ──
+const bgCanvas=document.getElementById('bg');
+const bgCtx=bgCanvas.getContext('2d');
+let bgT=0,bgStars=[],bgSand=[];
+
+function initBG(){
+  bgCanvas.width=window.innerWidth;bgCanvas.height=window.innerHeight;
+  bgStars=Array.from({length:120},()=>({
+    x:Math.random()*bgCanvas.width,y:Math.random()*bgCanvas.height*.65,
+    r:Math.random()*.8+.1,o:Math.random()*.5+.1,
+    t:Math.random()*Math.PI*2,sp:Math.random()*.02+.004,
+  }));
+  // Orion's Belt — three brighter stars in a row
+  bgStars.push({x:bgCanvas.width*.35,y:bgCanvas.height*.15,r:2.2,o:.9,t:0,sp:.01,orion:true});
+  bgStars.push({x:bgCanvas.width*.4, y:bgCanvas.height*.14,r:2.0,o:.85,t:.5,sp:.01,orion:true});
+  bgStars.push({x:bgCanvas.width*.45,y:bgCanvas.height*.16,r:2.2,o:.9,t:1,sp:.01,orion:true});
+}
+
+function drawBG(){
+  requestAnimationFrame(drawBG);
+  const W=bgCanvas.width,H=bgCanvas.height;
+  bgCtx.clearRect(0,0,W,H);
+  bgT+=.004;
+  // Night desert sky
+  const sky=bgCtx.createLinearGradient(0,0,0,H*.7);
+  sky.addColorStop(0,'#02020a');sky.addColorStop(.3,'#04040e');sky.addColorStop(.6,'#060610');sky.addColorStop(1,'#0c0808');
+  bgCtx.fillStyle=sky;bgCtx.fillRect(0,0,W,H*.7);
+  // Stars
+  bgStars.forEach(s=>{
+    s.t+=s.sp;
+    const fl=s.o*(0.4+0.6*Math.sin(s.t));
+    bgCtx.beginPath();bgCtx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    bgCtx.fillStyle=s.orion?`rgba(220,230,255,${fl})`:`rgba(200,210,240,${fl*.7})`;
+    bgCtx.fill();
+    if(s.orion&&fl>.7){
+      bgCtx.beginPath();bgCtx.arc(s.x,s.y,s.r*3,0,Math.PI*2);
+      bgCtx.fillStyle=`rgba(200,210,255,${(fl-.7)*.15})`;bgCtx.fill();
+    }
+  });
+  // Milky Way hint
+  const mw=bgCtx.createLinearGradient(0,0,W,H*.5);
+  mw.addColorStop(0,'rgba(180,190,240,.0)');mw.addColorStop(.35,'rgba(180,190,240,.025)');mw.addColorStop(.65,'rgba(180,190,240,.02)');mw.addColorStop(1,'rgba(180,190,240,.0)');
+  bgCtx.fillStyle=mw;bgCtx.fillRect(0,0,W,H*.6);
+  // Desert ground
+  const grd=bgCtx.createLinearGradient(0,H*.68,0,H);
+  grd.addColorStop(0,'#0e0c08');grd.addColorStop(.4,'#0a0806');grd.addColorStop(1,'#060404');
+  bgCtx.fillStyle=grd;bgCtx.fillRect(0,H*.68,W,H*.32);
+  // Sand dune silhouette
+  bgCtx.fillStyle='#0a0806';
+  bgCtx.beginPath();bgCtx.moveTo(0,H*.72);
+  let dx=0;
+  while(dx<W){const dw=Math.random()*120+60,dh=H*.04+Math.random()*.04;bgCtx.quadraticCurveTo(dx+dw*.4,H*.68-dh,dx+dw*.5,H*.7-dh*.5);bgCtx.quadraticCurveTo(dx+dw*.7,H*.7,dx+dw,H*.72);dx+=dw;}
+  bgCtx.lineTo(W,H);bgCtx.lineTo(0,H);bgCtx.closePath();bgCtx.fill();
+  // Distant pyramid silhouette (three pyramids of Giza)
+  [[W*.35,H*.72,W*.12],[W*.45,H*.72,W*.09],[W*.54,H*.72,W*.07]].forEach(([cx,baseY,base])=>{
+    bgCtx.fillStyle='rgba(8,6,4,.9)';
+    bgCtx.beginPath();bgCtx.moveTo(cx,baseY-base*.6);bgCtx.lineTo(cx+base*.5,baseY);bgCtx.lineTo(cx-base*.5,baseY);bgCtx.closePath();bgCtx.fill();
+  });
+}
+
+const cursor=document.getElementById('cursor');
+document.addEventListener('mousemove',e=>{cursor.style.left=e.clientX+'px';cursor.style.top=e.clientY+'px';});
+window.addEventListener('resize',()=>{resizeWave();initBG();});
+
+setupKnobs();
+resizeWave();initBG();drawBG();drawWave();
+buildKB();buildOctWheel();
+</script>
+</body>
+</html>
